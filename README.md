@@ -8,7 +8,9 @@ Hardware requirements:
 
 HT Diana
 2 x 20a ESC's - https://www.amazon.co.uk/dp/B0DLZGK1WN
+
 IRFZ44N Mosfet - https://www.amazon.co.uk/dp/B0D69Y4GKW
+
 Raspberry Pi Pico W (make sure you get the W for the wireless!) - https://thepihut.com/products/raspberry-pi-pico-w (only tried with v1, may be compatible with the Pico 2W)
 Misc wire / heat shrink etc
 
@@ -16,12 +18,19 @@ You can set your own WIFI SSID and password in the code. You can also customise 
 wiring up the blaster. I've mostly used the closest pins to the various switches so it should be fairly straight forward.
 
 esc1Pin = 28 (output to signal wire of ESC)
+
 esc2Pin = 6 (output to signal wire of ESC)
+
 solenoidPin = 20 (output to gate of solenoid)
+
 triggerPin = 14 (input from trigger)
+
 modePin1 = 10 (input from 3 pos switch)
+
 modePin2 = 11 (input from 3 pos switch)
+
 ledPin = 1 (output to LED)
+
 ledControlPin = 17 (input from 2 pos switch)
 
 At the moment the "rage mode" switch from the original blaster simply toggles the LED on and off. This is a placeholder
