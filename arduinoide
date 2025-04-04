@@ -1,0 +1,287 @@
+#include <WiFi.h>
+#include <WebServer.h>
+#include <WebSocketsServer.h>
+#include <Servo.h>
+#include <EEPROM.h>
+
+const char* ssid = "DIYana";
+const char* password = "12345678";
+
+WebServer server(80);
+WebSocketsServer webSocket(81);
+
+Servo esc1;
+Servo esc2;
+
+const int esc1Pin = 28;
+const int esc2Pin = 6;
+const int solenoidPin = 20;
+const int triggerPin = 14;
+const int modePin1 = 10;  
+const int modePin2 = 11;  
+const int ledPin = 1;        
+const int ledControlPin = 17;
+
+#define EEPROM_SIZE 24
+
+int motorSpeed = 1500;
+int motorDelay = 300;
+int solenoidTime = 100;
+int postFireDelay = 100;
+int fireMode = 0;
+int burstCount = 3;
+int fullAutoMaxTime = 5000;
+bool firstShot = true;
+bool triggerPressed = false;
+
+void setup() {
+    Serial.begin(115200);
+    EEPROM.begin(EEPROM_SIZE);
+    loadSettings();
+
+    WiFi.softAP(ssid, password);
+    Serial.println("Access Point Started");
+    Serial.println(WiFi.softAPIP());
+
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    server.on("/", handleRoot);
+    server.on("/fire", handleFire);
+    server.on("/set", handleSettings);
+    server.on("/burst15", handleBurst15);
+    server.begin();
+    Serial.println("Web Server Started");
+
+    esc1.attach(esc1Pin);
+    esc2.attach(esc2Pin);
+    pinMode(solenoidPin, OUTPUT);
+    pinMode(triggerPin, INPUT_PULLUP);
+    pinMode(ledPin, OUTPUT);
+    pinMode(ledControlPin, INPUT_PULLUP);
+    pinMode(modePin1, INPUT_PULLUP);
+    pinMode(modePin2, INPUT_PULLUP);
+    
+    digitalWrite(solenoidPin, LOW);
+    digitalWrite(ledPin, LOW);
+    
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    delay(2000);
+}
+
+void loop() {
+    server.handleClient();
+    webSocket.loop();
+
+    int mode1 = digitalRead(modePin1);
+    int mode2 = digitalRead(modePin2);
+
+    if (mode1 == HIGH && mode2 == HIGH) {
+        fireMode = -1;  // Safe mode
+    } else if (mode1 == HIGH && mode2 == LOW) {
+        fireMode = 0;  // Burst
+    } else if (mode1 == LOW && mode2 == HIGH) {
+        fireMode = 1;  // Full-auto
+    }
+
+    if (digitalRead(triggerPin) == LOW && !triggerPressed) {
+        triggerPressed = true;
+        fireBlaster();
+    }
+    if (digitalRead(triggerPin) == HIGH) {
+        triggerPressed = false;
+        firstShot = true;
+    }
+    
+    if (digitalRead(ledControlPin) == LOW) {
+        digitalWrite(ledPin, HIGH);
+    } else {
+        digitalWrite(ledPin, LOW);
+    }
+}
+
+void handleBurst15() {
+    logMessage("Executing 15-Round Burst!");
+    fireBurst15();
+    server.send(200, "text/plain", "🔥 15-Round Burst Executed!");
+}
+
+void fireBurst15() {
+    esc1.writeMicroseconds(motorSpeed);
+    esc2.writeMicroseconds(motorSpeed);
+    delay(motorDelay);
+
+    for (int i = 0; i < 15; i++) {
+        digitalWrite(solenoidPin, HIGH);
+        delay(solenoidTime);
+        digitalWrite(solenoidPin, LOW);
+        delay(postFireDelay);
+        logMessage("Firing Shot " + String(i + 1) + " of 15");
+    }
+
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    logMessage("15-Round Burst Completed!");
+}
+
+void fireBlaster() {
+    if (fireMode == -1) { 
+        logMessage("SAFE MODE - FIRE BLOCKED");
+        return;
+    }
+
+    logMessage("FIRE Command Received!");
+
+    if (fireMode == 0) { 
+        burstFire();
+    } else { 
+        fullAutoFire();
+    }
+}
+
+void burstFire() {
+    esc1.writeMicroseconds(motorSpeed);
+    esc2.writeMicroseconds(motorSpeed);
+    delay(motorDelay);
+    for (int i = 0; i < burstCount; i++) {
+        digitalWrite(solenoidPin, HIGH);
+        delay(solenoidTime);
+        digitalWrite(solenoidPin, LOW);
+        delay(postFireDelay);
+        logMessage("Firing Shot " + String(i + 1) + " of " + String(burstCount));
+
+    }
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    logMessage("Burst Fire Completed!");
+}
+
+void fullAutoFire() {
+    if (firstShot) {
+        esc1.writeMicroseconds(motorSpeed);
+        esc2.writeMicroseconds(motorSpeed);
+        delay(motorDelay);
+        firstShot = false;
+    }
+
+    unsigned long startTime = millis();  
+
+    while (digitalRead(triggerPin) == LOW) {
+        if (millis() - startTime >= fullAutoMaxTime) {  
+            logMessage("Full Auto Stopped (Timeout: " + String(fullAutoMaxTime) + "ms)");
+            break;
+        }
+
+        digitalWrite(solenoidPin, HIGH);
+        delay(solenoidTime);
+        digitalWrite(solenoidPin, LOW);
+        delay(postFireDelay);
+    }
+
+    esc1.writeMicroseconds(1000);
+    esc2.writeMicroseconds(1000);
+    logMessage("Full Auto Sequence Completed!");
+}
+
+void handleRoot() {
+    String html = "<!DOCTYPE html><html><head><title>DIYana Control</title>";
+    html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+    html += "<style>";
+    html += "body { background-color: black; color: lime; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }";
+    html += ".container { width: 90%; max-width: 320px; margin: auto; display: flex; flex-direction: column; align-items: center; }";
+    html += "h1, h2 { margin: 10px 0; }";
+    html += "button { border: none; padding: 15px; font-size: 20px; margin: 10px 0; width: 100%; cursor: pointer; border-radius: 5px; }";
+    html += ".fire-btn { background: orange; color: black; }";
+    html += ".burst-btn { background: red; color: white; }";
+    html += ".grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 300px; }"; 
+    html += ".grid label { text-align: left; font-size: 16px; }";
+    html += "input { padding: 8px; border: none; border-radius: 5px; font-size: 16px; width: calc(100% - 10px); text-align: center; }"; 
+    html += "textarea { width: 100%; height: 150px; font-size: 16px; margin-top: 10px; }";
+    html += "</style>";
+    html += "<script>let ws = new WebSocket('ws://' + window.location.hostname + ':81/');";
+    html += "ws.onmessage = (event) => {";
+    html += "document.getElementById('console').value += event.data + '\\n';";
+    html += "document.getElementById('console').scrollTop = document.getElementById('console').scrollHeight;};";
+    html += "function sendSettings() {";
+    html += "let speed = document.getElementById('motorSpeed').value * 10 + 1000;"; 
+    html += "let delay = document.getElementById('motorDelay').value;";
+    html += "let solenoid = document.getElementById('solenoidTime').value;";
+    html += "let postDelay = document.getElementById('postFireDelay').value;";
+    html += "let burst = document.getElementById('burstCount').value;";
+    html += "let maxTime = document.getElementById('fullAutoMaxTime').value;";
+    html += "fetch(`/set?speed=${speed}&delay=${delay}&solenoid=${solenoid}&postDelay=${postDelay}&burst=${burst}&maxTime=${maxTime}`)";
+    html += ".then(response => { if (response.ok) { ws.send('Settings Saved!'); }});";
+    html += "}";
+    html += "</script></head><body><div class='container'>";
+
+    html += "<h1>DIYana Control</h1>";
+    html += "<button class='fire-btn' onclick=\"fetch('/fire')\">Burst</button>";
+    html += "<button class='burst-btn' onclick=\"fetch('/burst15')\">Mag Dump</button>";
+
+    html += "<h2>Settings</h2>";
+    html += "<div class='grid'>";
+    html += "<label>Motor Speed (%)</label><input id='motorSpeed' type='number' min='0' max='100' value='" + String((motorSpeed - 1000) / 10) + "'>";
+    html += "<label>Spin-Up Delay (ms)</label><input id='motorDelay' type='number' value='" + String(motorDelay) + "'>";
+    html += "<label>Solenoid Time (ms)</label><input id='solenoidTime' type='number' value='" + String(solenoidTime) + "'>";
+    html += "<label>Post-Fire Delay (ms)</label><input id='postFireDelay' type='number' value='" + String(postFireDelay) + "'>";
+    html += "<label>Burst Count</label><input id='burstCount' type='number' value='" + String(burstCount) + "'>";
+    html += "<label>Auto Timeout (ms)</label><input id='fullAutoMaxTime' type='number' value='" + String(fullAutoMaxTime) + "'>";
+    html += "</div>";
+    html += "<button onclick='sendSettings()'>Save Settings</button>";
+
+    html += "<h2>Live Console</h2>";
+    html += "<textarea id='console' readonly></textarea>";
+    html += "</div></body></html>";
+
+    server.send(200, "text/html", html);
+}
+
+
+void handleFire() {
+    fireBlaster();
+    server.send(200, "text/plain", "🔥 Fire Command Executed!");
+}
+
+void handleSettings() {
+    if (server.hasArg("speed")) motorSpeed = server.arg("speed").toInt();
+    if (server.hasArg("delay")) motorDelay = server.arg("delay").toInt();
+    if (server.hasArg("solenoid")) solenoidTime = server.arg("solenoid").toInt();
+    if (server.hasArg("postDelay")) postFireDelay = server.arg("postDelay").toInt();
+    if (server.hasArg("burst")) burstCount = server.arg("burst").toInt();
+    if (server.hasArg("maxTime")) fullAutoMaxTime = server.arg("maxTime").toInt();
+    saveSettings();
+    server.send(200, "text/plain", "✅ Settings Saved!");
+}
+
+void saveSettings() {
+    EEPROM.put(0, motorSpeed);
+    EEPROM.put(4, motorDelay);
+    EEPROM.put(8, solenoidTime);
+    EEPROM.put(12, postFireDelay);
+    EEPROM.put(16, burstCount);
+    EEPROM.put(20, fullAutoMaxTime);
+    EEPROM.commit();
+}
+
+void loadSettings() {
+    EEPROM.get(0, motorSpeed);
+    EEPROM.get(4, motorDelay);
+    EEPROM.get(8, solenoidTime);
+    EEPROM.get(12, postFireDelay);
+    EEPROM.get(16, burstCount);
+    EEPROM.get(20, fullAutoMaxTime);
+    if (motorSpeed == 0 || motorSpeed > 2000) motorSpeed = 1500;
+    if (fullAutoMaxTime == 0 || fullAutoMaxTime > 10000) fullAutoMaxTime = 5000;
+}
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+    if (type == WStype_TEXT) {
+        webSocket.sendTXT(num, "Received: " + String((char*)payload));
+    }
+}
+
+void logMessage(String message) {
+    Serial.println(message);
+    webSocket.broadcastTXT(message);
+}
