@@ -54,8 +54,13 @@ Burst - Fires the current burst setting as if the trigger is pulled (default 1 u
 Mag Dump - Fires 15 shots full auto with the current settings
 
 Motor Speed/Power (% - 0-100)
+
 Spin up delay (depends on battery / ESC / etc - suggest starting with 300ms)
+
 Solenoid trigger time (as above, start with 50ms)
+
 Wait time after firing (as above, start with 50ms)
+
 Burst Amount (Choose the number of shots per burst, or 1 for single shot) 
+
 Full auto timeout (Adds a timeout on full auto to stop the blaster after a set time period - suggest 2000ms)
