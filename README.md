@@ -4,6 +4,7 @@ This started out with an idea to make the Diana more suitable for friendly games
 but quickly snowballed into a full rebuild of the electronics to allow full customisation. The code could be adapted to 
 suit any blaster of your choosing - I just happen to really like the form factor of the Diana so that's where I started.
 
+
 Hardware requirements:
 
 HT Diana
@@ -13,6 +14,7 @@ IRFZ44N Mosfet - https://www.amazon.co.uk/dp/B0D69Y4GKW
 
 Raspberry Pi Pico W (make sure you get the W for the wireless!) - https://thepihut.com/products/raspberry-pi-pico-w (only tried with v1, may be compatible with the Pico 2W)
 Misc wire / heat shrink etc
+
 
 You can set your own WIFI SSID and password in the code. You can also customise the pins if you've moved anything around
 wiring up the blaster. I've mostly used the closest pins to the various switches so it should be fairly straight forward.
@@ -44,6 +46,7 @@ for you to connect to. Once everything is connected, go to your browser and type
 work fine on desktop and mobile. 
 
 Please note for first use the default settings will be -1 so you need to configure them (see defaults below)
+
 
 Basic settings and remote firing via a web UI:
 
