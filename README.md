@@ -8,6 +8,7 @@ suit any blaster of your choosing - I just happen to really like the form factor
 Hardware requirements:
 
 HT Diana
+
 2 x 20a ESC's - https://www.amazon.co.uk/dp/B0DLZGK1WN
 
 IRFZ44N Mosfet - https://www.amazon.co.uk/dp/B0D69Y4GKW
