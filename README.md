@@ -44,7 +44,7 @@ Inputs are set to trigger when the pin is pulled low, so the common wires for th
 the various ground pads around the board.
 
 Once everything is wired up, plug in a battery and you're off to the races. The Pico should set up a new Wifi network
-for you to connect to. Once everything is connected, go to your browser and type in http://192.168.42.1. The site should
+for you to connect to. Once connected, go to your browser and type in http://192.168.42.1. The site should
 work fine on desktop and mobile. 
 
 Please note for first use the default settings will be -1 so you need to configure them (see defaults below)
