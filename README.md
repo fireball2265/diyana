@@ -14,6 +14,7 @@ HT Diana
 IRFZ44N Mosfet - https://www.amazon.co.uk/dp/B0D69Y4GKW
 
 Raspberry Pi Pico W (make sure you get the W for the wireless!) - https://thepihut.com/products/raspberry-pi-pico-w (only tried with v1, may be compatible with the Pico 2W)
+
 Misc wire / heat shrink etc
 
 
