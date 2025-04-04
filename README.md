@@ -51,6 +51,7 @@ Please note for first use the default settings will be -1 so you need to configu
 Basic settings and remote firing via a web UI:
 
 Burst - Fires the current burst setting as if the trigger is pulled (default 1 unless changed)
+
 Mag Dump - Fires 15 shots full auto with the current settings
 
 Motor Speed/Power (% - 0-100)
